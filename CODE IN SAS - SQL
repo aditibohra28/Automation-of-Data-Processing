@@ -1,0 +1,308 @@
+#Creating permanent library in SAS is important for storing and accessing datasets across sessions, ensuring data integrity, and facilitating efficient data management and analysis processes.
+libname aditi "C:\Users\Dell\OneDrive\Desktop\aditi\aditi";
+
+#Importing datasets in SAS is crucial as it lays the foundation for data analysis and manipulation. It enables users to access, transform, and analyze data efficiently, 
+facilitating informed decision-making and actionable insights.
+
+#Importing the given dataset
+PROC IMPORT OUT= aditi.orders
+            DATAFILE= "C:\Users\Dell\AppData\Local\Packages\microsoft.windowscommunicationsapps_8wekyb3d8bbwe\LocalState\Files\S0\3\Attachments\Sample - Superstore[579].xls"
+            DBMS=EXCEL REPLACE;
+     RANGE="Orders$"; 
+     GETNAMES=YES;
+     MIXED=NO;
+     SCANTEXT=YES;
+     USEDATE=YES;
+     SCANTIME=YES;
+RUN;
+
+#Creating the month year column as we are summarising the data based on month_yr column.
+
+data aditi.orders1;
+set aditi.orders;
+month = month(Order_Date);
+year = year(Order_Date);
+month_yr = MDY(month,1,year);
+FORMAT month_yr date9.;
+run;
+proc print data = aditi.orders1;run;
+
+
+#MACRO CREATED FOR PULLING THE DATA
+#first we created the start date and then based on that macro we created the other macro dates as well to automate the process.  
+#%let statement is used to create macros.
+%let start_dt = 01OCT2022;
+
+#_null_ creates null dataset means a dataset with no output mostly used when we want to test our macros. 
+#call symput is also used to create macros within dataset.
+
+data _null_;
+call symput('oct_strt_dt',put(intnx('month' , "&start_dt."d , 0 , 's'), date9.));
+call symput('oct_end_dt',put(intnx('month' , "&start_dt."d , 0 , 'e'), date9.));
+
+call symput('nov_strt_dt',put(intnx('month' , "&start_dt."d , 1 , 's'), date9.));
+call symput('nov_end_dt',put(intnx('month' , "&start_dt."d , 1 , 'e'), date9.));
+
+call symput('dec_strt_dt',put(intnx('month' , "&start_dt."d , 2 , 's'), date9.));
+call symput('dec_end_dt',put(intnx('month' , "&start_dt."d , 2 , 'e'), date9.));
+run;
+
+#getting the output of macro dates that we created
+%put &oct_strt_dt. &oct_end_dt. &nov_strt_dt. &nov_end_dt. &dec_strt_dt. &dec_end_dt.;
+
+/*creating summary table based on month_yr for shipmode with available data*/
+#Using sql in sas software with the help of proc sql for performing manipulations and analysis.
+proc sql;
+create table final_smry_shipmode as
+select month_yr , "Ship_Mode"n , count("Customer_ID"n) as tot_orders , sum(Sales) as tot_sales , sum(Quantity) as tot_quantity , sum(Discount) as tot_discount , sum(Profit) as tot_profit
+from aditi.orders1
+group by 1,2
+order by 1,2;
+quit;
+proc print data = final_smry_shipmode;run;
+
+
+# Importing new data shared.
+PROC IMPORT OUT= aditi.orders_oct_nov_dec
+            DATAFILE= "C:\Users\Dell\AppData\Local\Packages\microsoft.windowscommunicationsapps_8wekyb3d8bbwe\LocalState\Files\S0\3\Attachments\Sample - Superstore[579].xls"
+            DBMS=EXCEL REPLACE;
+     RANGE="Orders_Oct_Nov_Dec$"; 
+     GETNAMES=YES;
+     MIXED=NO;
+     SCANTEXT=YES;
+     USEDATE=YES;
+     SCANTIME=YES;
+RUN;
+proc print data = aditi.orders_oct_nov_dec;run;
+
+/*CREATING MONTH_YR COL FOR NEW DATA*/
+data aditi.orders_oct_nov_dec1;
+set aditi.orders_oct_nov_dec;
+month = month(Order_Date);
+year = year(Order_Date);
+month_yr = MDY(month,1,year);
+FORMAT month_yr date9.;
+run;
+proc print data = aditi.orders_oct_nov_dec1;run;
+
+
+# MANIPULATING THE DATA SO THAT SO WE WONT INSERT THE DATA TWICE.
+
+/*DELETING THE DATA IF IT ALREADY EXISTS TO AVOID DUPLICACY*/
+proc sql;
+delete from final_smry_shipmode
+where "&oct_strt_dt."d <= month_yr <= "&oct_end_dt."d;
+quit;
+
+/*THEN INSERTING THE NEW DATA*/
+proc sql;
+insert into final_smry_shipmode
+select * from final_smry_shipmode_oct;
+quit;
+
+#SUMMARISING AND INSERTING OCTOBER , NOVEMBER AND DECEMBER DATA ONE BY ONE. 
+
+/*CREATING SUMMARY TABLE FOR OCTOBER DATA*/
+proc sql;
+create table final_smry_shipmode_oct as
+select month_yr , "Ship_Mode"n , count("Customer_ID"n) as tot_orders , sum(Sales) as tot_sales , sum(Quantity) as tot_quantity , sum(Discount) as tot_discount , sum(Profit) as tot_profit
+from aditi.orders_oct_nov_dec1
+where "&oct_strt_dt."d <= month_yr <= "&oct_end_dt."d
+group by 1,2
+order by 1,2;
+quit;
+proc print data = final_smry_shipmode_oct;run;
+
+/*INSERING NOV DATA*/
+proc sql;
+insert into final_smry_shipmode
+select * from final_smry_shipmode_oct;
+quit;
+
+/*CREATING SUMMARY TABLE FOR THE NOV DATA */
+proc sql;
+create table final_smry_shipmode_nov as
+select month_yr , "Ship_Mode"n , count("Customer_ID"n) as tot_orders , sum(Sales) as tot_sales , sum(Quantity) as tot_quantity , sum(Discount) as tot_discount , sum(Profit) as tot_profit
+from aditi.orders_oct_nov_dec1
+where "&nov_strt_dt."d <= month_yr <= "&nov_end_dt."d
+group by 1,2
+order by 1,2;
+quit;
+proc print data = final_smry_shipmode_nov;run;
+
+/*INSERING NOV DATA*/
+proc sql;
+insert into final_smry_shipmode
+select * from final_smry_shipmode_nov;
+quit;
+
+/*CREATING SUMMARY TABLE FOR THE DEC DATA */
+proc sql;
+create table final_smry_shipmode_dec as
+select month_yr , "Ship_Mode"n , count("Customer_ID"n) as tot_orders , sum(Sales) as tot_sales , sum(Quantity) as tot_quantity , sum(Discount) as tot_discount , sum(Profit) as tot_profit
+from aditi.orders_oct_nov_dec1
+where "&dec_strt_dt."d <= month_yr <= "&dec_end_dt."d
+group by 1,2
+order by 1,2;
+quit;
+proc print data = final_smry_shipmode_dec;run;
+
+/*INSERING DEC DATA*/
+proc sql;
+insert into final_smry_shipmode
+select * from final_smry_shipmode_dec;
+quit;
+
+/*printing final sumry shipmode*/
+proc print data = final_smry_shipmode;run;
+
+
+
+#NOW CREATING FINAL SUMMARY TABLE FOR OTHER ATTRIBUTES LIKE 
+1. SEGMENT
+2. COUNTRY
+3. REGION
+4. CATEGORY
+AND THEN INSERTING NEW SUMMARY DATA (OCT, NOV & DEC) INTO EXISTING SUMMARY DATA 
+
+
+/*2nd table AS final_smry_segment*/
+#CREATING FINAL SUMMARY TABLE ON SEGEMNT FOR EXISTING DATA
+
+proc sql;
+create table final_smry_segment as
+select month_yr , Segment , count("Customer_ID"n) as tot_orders , sum(Sales) as tot_sales , sum(Quantity) as tot_quantity , sum(Discount) as tot_discount , sum(Profit) as tot_profit
+from aditi.orders1
+group by 1,2
+order by 1,2;
+quit;
+proc print data = final_smry_segment;run;
+
+#CREATING FINAL SUMMARY TABLE ON SEGMENT FOR NEW DATA (OCT , NOV & DEC) IN ONE GO i.e. USING START MACROS DATE 1ST OCT 2019 AND END MACROS DATE AS 31ST DEC 2019.
+
+proc sql;
+create table final_smry_segment1 as
+select month_yr , Segment , count("Customer_ID"n) as tot_orders , sum(Sales) as tot_sales , sum(Quantity) as tot_quantity , sum(Discount) as tot_discount , sum(Profit) as tot_profit
+from aditi.orders_oct_nov_dec1
+where "&oct_strt_dt."d <= month_yr <= "&dec_end_dt."d
+group by 1,2
+order by 1,2;
+quit;
+proc print data = final_smry_segment1;run;
+
+#INSERTING THE NEW DATA INTO EXISTING DATA.
+
+proc sql;
+insert into final_smry_segment 
+select * from final_smry_segment1;
+quit;
+
+#PRINTING FINAL SUMMARY TABLE AFTER INSERTION
+proc print data = final_smry_segment;run;
+
+
+
+/*3rd table AS final_smry_country*/
+#CREATING FINAL SUMMARY TABLE ON COUNTRY FOR EXISTING DATA
+
+proc sql;
+create table final_smry_country as
+select month_yr , Country_Region , count("Customer_ID"n) as tot_orders , sum(Sales) as tot_sales , sum(Quantity) as tot_quantity , sum(Discount) as tot_discount , sum(Profit) as tot_profit
+from aditi.orders1
+group by 1,2
+order by 1,2;
+quit;
+proc print data = final_smry_country;run;
+
+#CREATING FINAL SUMMARY TABLE ON COUNTRY FOR NEW DATA (OCT , NOV & DEC) IN ONE GO i.e. USING START MACROS DATE 1ST OCT 2019 AND END MACROS DATE AS 31ST DEC 2019.
+
+proc sql;
+create table final_smry_country1 as
+select month_yr , Country_Region , count("Customer_ID"n) as tot_orders , sum(Sales) as tot_sales , sum(Quantity) as tot_quantity , sum(Discount) as tot_discount , sum(Profit) as tot_profit
+from aditi.orders_oct_nov_dec1
+where "&oct_strt_dt."d <= month_yr <= "&dec_end_dt."d
+group by 1,2
+order by 1,2;
+quit;
+proc print data = final_smry_country1;run;
+
+#INSERTING THE NEW DATA INTO EXISTING DATA.
+proc sql;
+insert into final_smry_country 
+select * from final_smry_country1;
+quit;
+
+#PRINTING FINAL SUMMARY TABLE AFTER INSERTION
+proc print data = final_smry_country;run;
+
+
+
+/*4th table AS final_smry_region*/
+#CREATING FINAL SUMMARY TABLE ON REGION FOR EXISTING DATA
+
+proc sql;
+create table final_smry_region as
+select month_yr , "Region"n , count("Customer_ID"n) as tot_orders , sum(Sales) as tot_sales , sum(Quantity) as tot_quantity , sum(Discount) as tot_discount , sum(Profit) as tot_profit
+from aditi.orders1
+group by 1,2
+order by 1,2;
+quit;
+proc print data = final_smry_region;run;
+
+#CREATING FINAL SUMMARY TABLE ON REGION FOR NEW DATA (OCT , NOV & DEC) IN ONE GO i.e. USING START MACROS DATE 1ST OCT 2019 AND END MACROS DATE AS 31ST DEC 2019.
+
+proc sql;
+create table final_smry_region1 as
+select month_yr , "Region"n , count("Customer_ID"n) as tot_orders , sum(Sales) as tot_sales , sum(Quantity) as tot_quantity , sum(Discount) as tot_discount , sum(Profit) as tot_profit
+from aditi.orders_oct_nov_dec1
+where "&oct_strt_dt."d <= month_yr <= "&dec_end_dt."d
+group by 1,2
+order by 1,2;
+quit;
+proc print data = final_smry_region1;run;
+
+#INSERTING THE NEW DATA INTO EXISTING DATA.
+proc sql;
+insert into final_smry_region 
+select * from final_smry_region1;
+quit;
+
+#PRINTING FINAL SUMMARY TABLE AFTER INSERTION
+proc print data = final_smry_region;run;
+
+
+
+/*5th TABLE AS final_smry_category*/
+#CREATING FINAL SUMMARY TABLE ON CATEGORY FOR EXISTING DATA
+
+proc sql;
+create table final_smry_category as
+select month_yr , Category , Sub_Category , count("Customer_ID"n) as tot_orders , sum(Sales) as tot_sales , sum(Quantity) as tot_quantity , sum(Discount) as tot_discount , sum(Profit) as tot_profit
+from aditi.orders1
+group by 1,2,3
+order by 1,2,3;
+quit;
+proc print data = final_smry_category;run;
+
+#CREATING FINAL SUMMARY TABLE ON CATEGORY FOR NEW DATA (OCT , NOV & DEC) IN ONE GO i.e. USING START MACROS DATE 1ST OCT 2019 AND END MACROS DATE AS 31ST DEC 2019.
+
+proc sql;
+create table final_smry_category1 as
+select month_yr , Category , Sub_Category , count("Customer_ID"n) as tot_orders , sum(Sales) as tot_sales , sum(Quantity) as tot_quantity , sum(Discount) as tot_discount , sum(Profit) as tot_profit
+from aditi.orders_oct_nov_dec1
+where "&oct_strt_dt."d <= month_yr <= "&dec_end_dt."d
+group by 1,2,3
+order by 1,2,3;
+quit;
+proc print data = final_smry_category1;run;
+
+#INSERTING THE NEW DATA INTO EXISTING DATA.
+proc sql;
+insert into final_smry_category
+select * from final_smry_category1;
+quit;
+
+#PRINTING FINAL SUMMARY TABLE AFTER INSERTION
+proc print data = final_smry_category;run;
+
+
