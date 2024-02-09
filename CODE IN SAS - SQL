@@ -1,8 +1,8 @@
 #Creating permanent library in SAS is important for storing and accessing datasets across sessions, ensuring data integrity, and facilitating efficient data management and analysis processes.
 libname aditi "C:\Users\Dell\OneDrive\Desktop\aditi\aditi";
 
-#Importing datasets in SAS is crucial as it lays the foundation for data analysis and manipulation. It enables users to access, transform, and analyze data efficiently, 
-facilitating informed decision-making and actionable insights.
+#Importing datasets in SAS is crucial as it lays the foundation for data analysis and manipulation. It enables users to access, transform, and analyze data 
+efficiently, facilitating informed decision-making and actionable insights.
 
 #Importing the given dataset
 PROC IMPORT OUT= aditi.orders
@@ -178,7 +178,7 @@ order by 1,2;
 quit;
 proc print data = final_smry_segment;run;
 
-#CREATING FINAL SUMMARY TABLE ON SEGMENT FOR NEW DATA (OCT , NOV & DEC) IN ONE GO i.e. USING START MACROS DATE 1ST OCT 2019 AND END MACROS DATE AS 31ST DEC 2019.
+#CREATING FINAL SUMMARY TABLE ON SEGMENT FOR NEW DATA (OCT , NOV & DEC) IN ONE GO i.e. USING START MACROS DATE 1ST OCT 2022 AND END MACROS DATE AS 31ST DEC 2022.
 
 proc sql;
 create table final_smry_segment1 as
@@ -214,7 +214,7 @@ order by 1,2;
 quit;
 proc print data = final_smry_country;run;
 
-#CREATING FINAL SUMMARY TABLE ON COUNTRY FOR NEW DATA (OCT , NOV & DEC) IN ONE GO i.e. USING START MACROS DATE 1ST OCT 2019 AND END MACROS DATE AS 31ST DEC 2019.
+#CREATING FINAL SUMMARY TABLE ON COUNTRY FOR NEW DATA (OCT , NOV & DEC) IN ONE GO i.e. USING START MACROS DATE 1ST OCT 2022 AND END MACROS DATE AS 31ST DEC 2022.
 
 proc sql;
 create table final_smry_country1 as
@@ -249,7 +249,7 @@ order by 1,2;
 quit;
 proc print data = final_smry_region;run;
 
-#CREATING FINAL SUMMARY TABLE ON REGION FOR NEW DATA (OCT , NOV & DEC) IN ONE GO i.e. USING START MACROS DATE 1ST OCT 2019 AND END MACROS DATE AS 31ST DEC 2019.
+#CREATING FINAL SUMMARY TABLE ON REGION FOR NEW DATA (OCT , NOV & DEC) IN ONE GO i.e. USING START MACROS DATE 1ST OCT 2022 AND END MACROS DATE AS 31ST DEC 2022.
 
 proc sql;
 create table final_smry_region1 as
@@ -284,7 +284,7 @@ order by 1,2,3;
 quit;
 proc print data = final_smry_category;run;
 
-#CREATING FINAL SUMMARY TABLE ON CATEGORY FOR NEW DATA (OCT , NOV & DEC) IN ONE GO i.e. USING START MACROS DATE 1ST OCT 2019 AND END MACROS DATE AS 31ST DEC 2019.
+#CREATING FINAL SUMMARY TABLE ON CATEGORY FOR NEW DATA (OCT , NOV & DEC) IN ONE GO i.e. USING START MACROS DATE 1ST OCT 2022 AND END MACROS DATE AS 31ST DEC 2022.
 
 proc sql;
 create table final_smry_category1 as
